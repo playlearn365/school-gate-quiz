@@ -351,7 +351,7 @@ const praises = [
   "超級無敵棒！","你是小天才！"
 ];
 
-// ── Tone.js 音效 ─────────────────────────────────────
+// ── Tone.js + 語音音效 ───────────────────────────────
 let toneReady = false;
 
 async function ensureTone() {
@@ -361,36 +361,53 @@ async function ensureTone() {
   }
 }
 
-// 答對：木琴上升四音（清脆歡快）
-async function playCorrect() {
-  await ensureTone();
-  const xylophone = new Tone.Synth({
-    oscillator: { type: "triangle" },
-    envelope: { attack: 0.005, decay: 0.3, sustain: 0, release: 0.3 },
-    volume: -6
-  }).toDestination();
+// 語音合成（Web Speech API）
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "zh-TW";
+  utter.rate = 0.9;
+  utter.pitch = 1.3;
+  utter.volume = 1.0;
 
-  const now = Tone.now();
-  const notes = ["C5", "E5", "G5", "C6"];
-  notes.forEach((note, i) => {
-    xylophone.triggerAttackRelease(note, "8n", now + i * 0.13);
-  });
-  setTimeout(() => xylophone.dispose(), 2000);
+  // 優先選台灣中文語音
+  const voices = window.speechSynthesis.getVoices();
+  const twVoice = voices.find(v => v.lang === "zh-TW") ||
+                  voices.find(v => v.lang.startsWith("zh"));
+  if (twVoice) utter.voice = twVoice;
+
+  window.speechSynthesis.speak(utter);
 }
 
-// 答錯：兩聲明顯下降短音（清楚但不刺耳）
+// 鞭炮音效：多個短爆破音快速連發
+async function playFirecracker() {
+  await ensureTone();
+  const count = 18;
+  for (let i = 0; i < count; i++) {
+    const delay = i * 90 + Math.random() * 60;
+    setTimeout(() => {
+      const noise = new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 0.001, decay: 0.06 + Math.random() * 0.06, sustain: 0, release: 0.02 },
+        volume: 2
+      }).toDestination();
+      noise.triggerAttackRelease("16n");
+      setTimeout(() => noise.dispose(), 400);
+    }, delay);
+  }
+}
+
+// 答對：鞭炮 + 語音「YA！答對了！」
+async function playCorrect() {
+  playFirecracker();
+  setTimeout(() => speak("頁！答對了！"), 300);
+}
+
+// 答錯：語音「加油！再想一想喔！」
 async function playWrong() {
   await ensureTone();
-  const synth = new Tone.Synth({
-    oscillator: { type: "sawtooth" },
-    envelope: { attack: 0.01, decay: 0.35, sustain: 0.1, release: 0.3 },
-    volume: 2
-  }).toDestination();
-
-  const now = Tone.now();
-  synth.triggerAttackRelease("C4", "8n", now);
-  synth.triggerAttackRelease("G3", "8n", now + 0.28);
-  setTimeout(() => synth.dispose(), 1500);
+  speak("加油！再想一想喔！");
 }
 
 // ── 遊戲邏輯 ─────────────────────────────────────────
