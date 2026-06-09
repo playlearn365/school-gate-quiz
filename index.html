@@ -378,18 +378,18 @@ async function playCorrect() {
   setTimeout(() => xylophone.dispose(), 2000);
 }
 
-// 答錯：兩聲低沉短音（溫和不嚇人）
+// 答錯：兩聲明顯下降短音（清楚但不刺耳）
 async function playWrong() {
   await ensureTone();
   const synth = new Tone.Synth({
-    oscillator: { type: "sine" },
-    envelope: { attack: 0.01, decay: 0.25, sustain: 0, release: 0.2 },
-    volume: -10
+    oscillator: { type: "sawtooth" },
+    envelope: { attack: 0.01, decay: 0.35, sustain: 0.1, release: 0.3 },
+    volume: 2
   }).toDestination();
 
   const now = Tone.now();
-  synth.triggerAttackRelease("A3", "8n", now);
-  synth.triggerAttackRelease("F3", "8n", now + 0.22);
+  synth.triggerAttackRelease("C4", "8n", now);
+  synth.triggerAttackRelease("G3", "8n", now + 0.28);
   setTimeout(() => synth.dispose(), 1500);
 }
 
