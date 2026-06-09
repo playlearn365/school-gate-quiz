@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>幼兒園進校門闖關遊戲</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: #f0faf5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 700px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem 2rem;
+      position: relative;
+    }
+
+    #teacher-bar {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #level-badge {
+      font-size: 14px;
+      color: #5F5E5A;
+      background: #F1EFE8;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 0.5px solid #D3D1C7;
+    }
+    #teacher-btn {
+      font-size: 14px;
+      padding: 6px 16px;
+      border-radius: 8px;
+      border: 1px solid #B4B2A9;
+      background: #F1EFE8;
+      color: #444441;
+      cursor: pointer;
+    }
+    #teacher-btn:hover { background: #D3D1C7; }
+
+    #teacher-panel {
+      display: none;
+      position: absolute;
+      top: 54px;
+      right: 16px;
+      background: #fff;
+      border: 1px solid #B4B2A9;
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      width: 220px;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    #teacher-panel h3 {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      color: #2C2C2A;
+    }
+    .diff-btn {
+      display: block; width: 100%; text-align: left;
+      font-size: 15px; padding: 9px 14px; margin-bottom: 8px;
+      border-radius: 8px;
+      border: 1px solid #D3D1C7;
+      background: #F1EFE8;
+      color: #2C2C2A;
+      cursor: pointer;
+    }
+    .diff-btn:hover { background: #D3D1C7; }
+    .diff-btn.active {
+      border-color: #1D9E75;
+      background: #E1F5EE;
+      color: #085041;
+      font-weight: 500;
+    }
+
+    #category-label {
+      font-size: 18px;
+      color: #888780;
+      margin-bottom: 0.6rem;
+      letter-spacing: 2px;
+    }
+
+    #card-image {
+      font-size: 140px;
+      line-height: 1;
+      margin-bottom: 1rem;
+      text-align: center;
+      user-select: none;
+      animation: popIn 0.25s ease;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.6); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    #hint {
+      font-size: 22px;
+      color: #5F5E5A;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    #choices {
+      display: flex;
+      gap: 28px;
+      justify-content: center;
+    }
+
+    .choice-btn {
+      width: 160px;
+      height: 160px;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      border-radius: 28px;
+      border: 3px solid #D3D1C7;
+      background: #fff;
+      cursor: pointer;
+      transition: transform 0.1s, border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px;
+      user-select: none;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      line-height: 1.3;
+      color: #2C2C2A;
+    }
+    .choice-btn:hover {
+      transform: scale(1.08);
+      border-color: #1D9E75;
+      box-shadow: 0 4px 20px rgba(29,158,117,0.2);
+    }
+    .choice-btn:active { transform: scale(0.96); }
+    .choice-btn.correct {
+      background: #E1F5EE;
+      border-color: #1D9E75;
+      box-shadow: 0 4px 20px rgba(29,158,117,0.3);
+    }
+    .choice-btn.wrong {
+      background: #FCEBEB;
+      border-color: #E24B4A;
+      animation: shake 0.35s;
+    }
+
+    @keyframes shake {
+      0%,100%{ transform: translateX(0); }
+      20%    { transform: translateX(-14px); }
+      60%    { transform: translateX(14px); }
+    }
+
+    #celebration {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    #celebration.show { display: flex; }
+
+    #celebrate-card {
+      background: #fff;
+      border-radius: 36px;
+      padding: 3rem 3.5rem;
+      text-align: center;
+      max-width: 380px;
+      width: 90%;
+      animation: popIn 0.3s ease;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    }
+    #celebrate-emoji {
+      font-size: 100px;
+      animation: bounce 0.5s infinite alternate;
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-22px); }
+    }
+    #celebrate-title {
+      font-size: 44px;
+      font-weight: 700;
+      color: #0F6E56;
+      margin: 0.5rem 0 0.4rem;
+    }
+    #celebrate-stars {
+      font-size: 48px;
+      letter-spacing: 8px;
+      margin-bottom: 0.5rem;
+    }
+    #celebrate-sub {
+      font-size: 22px;
+      color: #5F5E5A;
+      margin-bottom: 2rem;
+    }
+    #next-btn {
+      font-size: 24px;
+      padding: 18px 56px;
+      border-radius: 50px;
+      border: none;
+      background: #1D9E75;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(29,158,117,0.35);
+      transition: background 0.15s, transform 0.1s;
+    }
+    #next-btn:hover { background: #0F6E56; transform: scale(1.03); }
+    #next-btn:active { transform: scale(0.97); }
+
+    .confetti {
+      position: fixed;
+      width: 13px; height: 13px;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 300;
+      animation: fall linear forwards;
+    }
+    @keyframes fall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div id="teacher-bar">
+    <span id="level-badge">簡單</span>
+    <button id="teacher-btn">👩‍🏫 老師</button>
+  </div>
+
+  <div id="teacher-panel">
+    <h3>切換難度</h3>
+    <button class="diff-btn active" data-level="easy">🌱 簡單（基礎詞）</button>
+    <button class="diff-btn" data-level="medium">🌿 中等（常見詞）</button>
+    <button class="diff-btn" data-level="hard">🌳 困難（進階詞）</button>
+  </div>
+
+  <div id="category-label"></div>
+  <div id="card-image"></div>
+  <div id="hint"></div>
+  <div id="choices"></div>
+</div>
+
+<div id="celebration">
+  <div id="celebrate-card">
+    <div id="celebrate-emoji">🎉</div>
+    <div id="celebrate-title">答對了！</div>
+    <div id="celebrate-stars">⭐⭐⭐</div>
+    <div id="celebrate-sub"></div>
+    <button id="next-btn">繼續 →</button>
+  </div>
+</div>
+
+<script>
+// ── 題庫 ──────────────────────────────────────────────
+const allQuestions = {
+  easy: [
+    { emoji:"🍎", answer:"蘋果",   wrong:"香蕉",   hint:"紅紅圓圓甜甜的水果",       cat:"🍉 水果" },
+    { emoji:"🍌", answer:"香蕉",   wrong:"蘋果",   hint:"黃色彎彎的水果",           cat:"🍉 水果" },
+    { emoji:"🍊", answer:"橘子",   wrong:"檸檬",   hint:"橘色圓圓酸甜的水果",       cat:"🍉 水果" },
+    { emoji:"🍇", answer:"葡萄",   wrong:"草莓",   hint:"紫色一串串的水果",         cat:"🍉 水果" },
+    { emoji:"🍓", answer:"草莓",   wrong:"葡萄",   hint:"紅色小小甜甜的水果",       cat:"🍉 水果" },
+    { emoji:"🍑", answer:"水蜜桃", wrong:"梨子",   hint:"粉粉毛毛香香的水果",       cat:"🍉 水果" },
+    { emoji:"🍐", answer:"梨子",   wrong:"水蜜桃", hint:"綠色甜甜多汁的水果",       cat:"🍉 水果" },
+    { emoji:"🍉", answer:"西瓜",   wrong:"哈密瓜", hint:"夏天吃的大水果",           cat:"🍉 水果" },
+    { emoji:"🐶", answer:"小狗",   wrong:"小貓",   hint:"汪汪叫的動物",             cat:"🐾 動物" },
+    { emoji:"🐱", answer:"小貓",   wrong:"小狗",   hint:"喵喵叫的動物",             cat:"🐾 動物" },
+    { emoji:"🐰", answer:"兔子",   wrong:"松鼠",   hint:"長耳朵愛吃紅蘿蔔",         cat:"🐾 動物" },
+    { emoji:"🐸", answer:"青蛙",   wrong:"烏龜",   hint:"呱呱叫會跳的動物",         cat:"🐾 動物" },
+    { emoji:"🐠", answer:"金魚",   wrong:"青蛙",   hint:"在水裡游泳的動物",         cat:"🐾 動物" },
+    { emoji:"🐔", answer:"母雞",   wrong:"鴨子",   hint:"咕咕叫會生蛋的動物",       cat:"🐾 動物" },
+    { emoji:"🐷", answer:"小豬",   wrong:"小牛",   hint:"胖胖圓鼻子的動物",         cat:"🐾 動物" },
+    { emoji:"🐮", answer:"乳牛",   wrong:"小馬",   hint:"哞哞叫產牛奶的動物",       cat:"🐾 動物" },
+    { emoji:"🥕", answer:"紅蘿蔔", wrong:"白蘿蔔", hint:"橘色長長的蔬菜",           cat:"🥦 蔬菜" },
+    { emoji:"🥦", answer:"花椰菜", wrong:"菠菜",   hint:"綠色像小樹的蔬菜",         cat:"🥦 蔬菜" },
+    { emoji:"🌽", answer:"玉米",   wrong:"豌豆",   hint:"黃黃甜甜一粒粒的蔬菜",     cat:"🥦 蔬菜" },
+    { emoji:"🍆", answer:"茄子",   wrong:"青椒",   hint:"紫色長長的蔬菜",           cat:"🥦 蔬菜" },
+    { emoji:"🥬", answer:"高麗菜", wrong:"菠菜",   hint:"圓圓一層一層的蔬菜",       cat:"🥦 蔬菜" },
+    { emoji:"🧅", answer:"青蔥",   wrong:"大蒜",   hint:"綠色長長很香的蔬菜",       cat:"🥦 蔬菜" },
+    { emoji:"🚗", answer:"汽車",   wrong:"摩托車", hint:"在路上跑的交通工具",       cat:"🚌 交通" },
+    { emoji:"🚌", answer:"公車",   wrong:"火車",   hint:"很多人一起搭的大車",       cat:"🚌 交通" },
+    { emoji:"🚲", answer:"腳踏車", wrong:"摩托車", hint:"用腳踩踏板的車",           cat:"🚌 交通" },
+    { emoji:"✈️", answer:"飛機",   wrong:"輪船",   hint:"在天上飛的交通工具",       cat:"🚌 交通" },
+    { emoji:"🚂", answer:"火車",   wrong:"公車",   hint:"在鐵路上跑的交通工具",     cat:"🚌 交通" },
+  ],
+  medium: [
+    { emoji:"🥭", answer:"芒果",   wrong:"鳳梨",   hint:"黃色香甜的熱帶水果",       cat:"🍉 水果" },
+    { emoji:"🍍", answer:"鳳梨",   wrong:"芒果",   hint:"有刺皮的熱帶水果",         cat:"🍉 水果" },
+    { emoji:"🍒", answer:"櫻桃",   wrong:"藍莓",   hint:"紅色小小成雙的水果",       cat:"🍉 水果" },
+    { emoji:"🥝", answer:"奇異果", wrong:"芒果",   hint:"綠色毛毛的水果",           cat:"🍉 水果" },
+    { emoji:"🍈", answer:"哈密瓜", wrong:"西瓜",   hint:"綠皮橘肉香香甜甜的瓜",     cat:"🍉 水果" },
+    { emoji:"🐘", answer:"大象",   wrong:"長頸鹿", hint:"有長鼻子的大動物",         cat:"🐾 動物" },
+    { emoji:"🦁", answer:"獅子",   wrong:"老虎",   hint:"森林之王",                 cat:"🐾 動物" },
+    { emoji:"🐯", answer:"老虎",   wrong:"獅子",   hint:"身上有條紋的大貓",         cat:"🐾 動物" },
+    { emoji:"🦊", answer:"狐狸",   wrong:"狼",     hint:"聰明的尖耳動物",           cat:"🐾 動物" },
+    { emoji:"🐧", answer:"企鵝",   wrong:"鵝",     hint:"穿黑白衣服的鳥",           cat:"🐾 動物" },
+    { emoji:"🦆", answer:"鴨子",   wrong:"母雞",   hint:"嘎嘎叫愛游水的鳥",         cat:"🐾 動物" },
+    { emoji:"🥔", answer:"馬鈴薯", wrong:"紅蘿蔔", hint:"可以炸成薯條的蔬菜",       cat:"🥦 蔬菜" },
+    { emoji:"🍄", answer:"香菇",   wrong:"玉米",   hint:"傘狀的菌類食物",           cat:"🥦 蔬菜" },
+    { emoji:"🫑", answer:"青椒",   wrong:"茄子",   hint:"綠色甜甜的蔬菜",           cat:"🥦 蔬菜" },
+    { emoji:"🚒", answer:"消防車", wrong:"警察車", hint:"紅色緊急救援的車",         cat:"🚌 交通" },
+    { emoji:"🚑", answer:"救護車", wrong:"消防車", hint:"白色緊急送醫的車",         cat:"🚌 交通" },
+    { emoji:"🚀", answer:"火箭",   wrong:"飛機",   hint:"飛到太空去的交通工具",     cat:"🚌 交通" },
+    { emoji:"🚢", answer:"輪船",   wrong:"帆船",   hint:"在海上航行的大船",         cat:"🚌 交通" },
+  ],
+  hard: [
+    { emoji:"🥑", answer:"酪梨",   wrong:"芒果",   hint:"綠色心形的健康水果",       cat:"🍉 水果" },
+    { emoji:"🫐", answer:"藍莓",   wrong:"草莓",   hint:"深藍色小小的水果",         cat:"🍉 水果" },
+    { emoji:"🍋", answer:"檸檬",   wrong:"橘子",   hint:"黃色很酸的水果",           cat:"🍉 水果" },
+    { emoji:"🦋", answer:"蝴蝶",   wrong:"蜻蜓",   hint:"翩翩飛的美麗昆蟲",         cat:"🐾 動物" },
+    { emoji:"🦩", answer:"紅鶴",   wrong:"白鷺",   hint:"粉紅色長腿的鳥",           cat:"🐾 動物" },
+    { emoji:"🐙", answer:"章魚",   wrong:"螃蟹",   hint:"有八隻觸手的海洋動物",     cat:"🐾 動物" },
+    { emoji:"🦀", answer:"螃蟹",   wrong:"章魚",   hint:"橫著走路的海洋動物",       cat:"🐾 動物" },
+    { emoji:"🦒", answer:"長頸鹿", wrong:"大象",   hint:"脖子超長的動物",           cat:"🐾 動物" },
+    { emoji:"🧄", answer:"大蒜",   wrong:"洋蔥",   hint:"白白辣辣有強烈氣味的蔬菜", cat:"🥦 蔬菜" },
+    { emoji:"🧅", answer:"洋蔥",   wrong:"大蒜",   hint:"切了會讓人流眼淚的蔬菜",   cat:"🥦 蔬菜" },
+    { emoji:"🫛", answer:"豌豆",   wrong:"玉米",   hint:"綠色圓圓一粒粒的蔬菜",     cat:"🥦 蔬菜" },
+    { emoji:"🚁", answer:"直升機", wrong:"飛機",   hint:"螺旋槳可以垂直起降的飛行器", cat:"🚌 交通" },
+    { emoji:"⛵", answer:"帆船",   wrong:"輪船",   hint:"用風力推動的白帆船",       cat:"🚌 交通" },
+    { emoji:"🛸", answer:"飛碟",   wrong:"火箭",   hint:"圓圓扁扁的外星飛行器",     cat:"🚌 交通" },
+    { emoji:"🚜", answer:"拖拉機", wrong:"卡車",   hint:"農田裡耕地的大機器",       cat:"🚌 交通" },
+  ]
+};
+
+const praises = [
+  "好棒！你最厲害！","哇！答對了！","太聰明了！",
+  "你好厲害喔！","加油！繼續答！","真的很棒！",
+  "超級無敵棒！","你是小天才！"
+];
+
+// ── Tone.js 音效 ─────────────────────────────────────
+let toneReady = false;
+
+async function ensureTone() {
+  if (!toneReady) {
+    await Tone.start();
+    toneReady = true;
+  }
+}
+
+// 答對：木琴上升四音（清脆歡快）
+async function playCorrect() {
+  await ensureTone();
+  const xylophone = new Tone.Synth({
+    oscillator: { type: "triangle" },
+    envelope: { attack: 0.005, decay: 0.3, sustain: 0, release: 0.3 },
+    volume: -6
+  }).toDestination();
+
+  const now = Tone.now();
+  const notes = ["C5", "E5", "G5", "C6"];
+  notes.forEach((note, i) => {
+    xylophone.triggerAttackRelease(note, "8n", now + i * 0.13);
+  });
+  setTimeout(() => xylophone.dispose(), 2000);
+}
+
+// 答錯：兩聲低沉短音（溫和不嚇人）
+async function playWrong() {
+  await ensureTone();
+  const synth = new Tone.Synth({
+    oscillator: { type: "sine" },
+    envelope: { attack: 0.01, decay: 0.25, sustain: 0, release: 0.2 },
+    volume: -10
+  }).toDestination();
+
+  const now = Tone.now();
+  synth.triggerAttackRelease("A3", "8n", now);
+  synth.triggerAttackRelease("F3", "8n", now + 0.22);
+  setTimeout(() => synth.dispose(), 1500);
+}
+
+// ── 遊戲邏輯 ─────────────────────────────────────────
+let level = "easy";
+let lastIdx = -1;
+let answered = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function nextDifferentIdx() {
+  const pool = allQuestions[level];
+  let idx;
+  do { idx = Math.floor(Math.random() * pool.length); }
+  while (idx === lastIdx && pool.length > 1);
+  lastIdx = idx;
+  return idx;
+}
+
+function loadQuestion() {
+  answered = false;
+  const q = allQuestions[level][nextDifferentIdx()];
+
+  const cardEl = document.getElementById("card-image");
+  cardEl.style.animation = "none";
+  void cardEl.offsetWidth;
+  cardEl.style.animation = "";
+  cardEl.textContent = q.emoji;
+
+  document.getElementById("category-label").textContent = q.cat;
+  document.getElementById("hint").textContent = q.hint;
+
+  const choices = shuffle([q.answer, q.wrong]);
+  const el = document.getElementById("choices");
+  el.innerHTML = choices.map(c =>
+    `<button class="choice-btn" data-word="${c}">${c}</button>`
+  ).join("");
+  el.querySelectorAll(".choice-btn").forEach(btn =>
+    btn.addEventListener("click", () => handleAnswer(btn, q.answer))
+  );
+}
+
+function handleAnswer(btn, correct) {
+  if (answered) return;
+  answered = true;
+  if (btn.dataset.word === correct) {
+    btn.classList.add("correct");
+    playCorrect();
+    setTimeout(showCelebration, 300);
+  } else {
+    btn.classList.add("wrong");
+    playWrong();
+    document.querySelectorAll(".choice-btn").forEach(b => {
+      if (b.dataset.word === correct) b.classList.add("correct");
+    });
+    setTimeout(loadQuestion, 1500);
+  }
+}
+
+function showCelebration() {
+  document.getElementById("celebrate-sub").textContent =
+    praises[Math.floor(Math.random() * praises.length)];
+  document.getElementById("celebration").classList.add("show");
+  spawnConfetti();
+}
+
+function spawnConfetti() {
+  const colors = ["#1D9E75","#378ADD","#D85A30","#D4537E","#BA7517","#7F77DD","#639922"];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement("div");
+    el.className = "confetti";
+    el.style.left = Math.random() * 100 + "vw";
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDuration = (1.2 + Math.random() * 2) + "s";
+    el.style.animationDelay = (Math.random() * 0.6) + "s";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+  }
+}
+
+// ── UI 事件 ───────────────────────────────────────────
+document.getElementById("next-btn").addEventListener("click", () => {
+  document.getElementById("celebration").classList.remove("show");
+  loadQuestion();
+});
+
+document.getElementById("teacher-btn").addEventListener("click", e => {
+  e.stopPropagation();
+  const p = document.getElementById("teacher-panel");
+  p.style.display = p.style.display === "block" ? "none" : "block";
+});
+document.addEventListener("click", () => {
+  document.getElementById("teacher-panel").style.display = "none";
+});
+document.getElementById("teacher-panel").addEventListener("click", e => e.stopPropagation());
+
+document.querySelectorAll(".diff-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    level = btn.dataset.level;
+    lastIdx = -1;
+    const labels = { easy:"簡單", medium:"中等", hard:"困難" };
+    document.getElementById("level-badge").textContent = labels[level];
+    document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("teacher-panel").style.display = "none";
+    loadQuestion();
+  });
+});
+
+loadQuestion();
+</script>
+</body>
+</html>
